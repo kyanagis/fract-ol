@@ -1,67 +1,81 @@
 # **************************************************************************** #
 #                                                                              #
-#                               F R A C T O L                                  #
+#                                                         :::      ::::::::    #
+#    Makefile                                           :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: kyanagis <kyanagis@student.42tokyo.jp>     +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2025/07/05 04:36:45 by kyanagis          #+#    #+#              #
+#    Updated: 2025/07/05 04:36:54 by kyanagis         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
-### Paths ######################################################################
 NAME        := fractol
+CC          := cc
+MATH_OPT    := -Ofast -ffast-math
+CFLAGS      := -Wall -Wextra -Werror $(MATH_OPT) -Iinclude -Iminilibx-linux -Ilibft -Ift_printf
+LDFLAGS     := -Lminilibx-linux -lmlx -lXext -lX11 -lm -lz \
+               -Llibft -lft -Lft_printf -lftprintf
 
 SRC_DIR     := src
 OBJ_DIR     := obj
-INC_DIR     := include
+
+SRC         := $(SRC_DIR)/main.c              \
+               $(SRC_DIR)/init.c              \
+               $(SRC_DIR)/render.c            \
+               $(SRC_DIR)/hooks.c             \
+               $(SRC_DIR)/color.c             \
+               $(SRC_DIR)/mandelbrot.c        \
+               $(SRC_DIR)/julia.c             \
+               $(SRC_DIR)/burning_ship.c      \
+               $(SRC_DIR)/sierpinski_gasket.c
+
+OBJ         := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRC))
+
 LIBFT_DIR   := libft
+LIBFT       := $(LIBFT_DIR)/libft.a
+
 PRINTF_DIR  := ft_printf
-MLX_DIR     := minilibx-linux        # ← Linux 版なら minilibx-linux ではなくこの名前
+PRINTF      := $(PRINTF_DIR)/libftprintf.a
 
-### Compiler / Flags ###########################################################
-CC      := cc
-CFLAGS  := -Wall -Wextra -Werror -O3
-INCS    := -I$(INC_DIR) -I$(LIBFT_DIR) -I$(PRINTF_DIR) -I$(MLX_DIR)
+MLX_DIR     := minilibx-linux
+MLX_LIB     := $(MLX_DIR)/libmlx.a
+MLX_GIT     := https://github.com/42Paris/minilibx-linux.git
 
+.PHONY: all clean fclean re $(LIBFT) $(PRINTF)
 
-SRC     := $(wildcard $(SRC_DIR)/*.c)
-OBJ     := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRC))
+all: $(MLX_LIB) $(LIBFT) $(PRINTF) $(NAME)
 
+$(NAME): $(OBJ)
+	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
 
-LIBFT_A     := $(LIBFT_DIR)/libft.a
-PRINTF_A    := $(PRINTF_DIR)/libftprintf.a
-MLX_A       := $(MLX_DIR)/libmlx.a           # Linux 版は libmlx.a が生成されます
-MLX_LIBS    := -L$(MLX_DIR) -lmlx -lX11 -lXext -lm
+$(OBJ_DIR):
+	@mkdir -p $@
 
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
 
-all: $(NAME)
-
-$(NAME): $(OBJ) $(LIBFT_A) $(PRINTF_A) $(MLX_A)
-	$(CC) $(CFLAGS) $(OBJ) $(LIBFT_A) $(PRINTF_A) $(MLX_LIBS) -o $@
-
-
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	@mkdir -p $(OBJ_DIR)
-	$(CC) $(CFLAGS) $(INCS) -c $< -o $@
-
-
-$(LIBFT_A):
-	$(MAKE) -C $(LIBFT_DIR)
-
-$(PRINTF_A):
-	$(MAKE) -C $(PRINTF_DIR)
-
-$(MLX_A):
+$(MLX_LIB):
+	@if [ ! -d $(MLX_DIR) ]; then \
+		git clone $(MLX_GIT) $(MLX_DIR); \
+	fi
 	$(MAKE) -C $(MLX_DIR)
 
+$(LIBFT):
+	$(MAKE) -C $(LIBFT_DIR)
+
+$(PRINTF):
+	$(MAKE) -C $(PRINTF_DIR)
 
 clean:
-	rm -rf $(OBJ_DIR)
+	$(RM) -r $(OBJ_DIR)
 	$(MAKE) -C $(LIBFT_DIR) clean
 	$(MAKE) -C $(PRINTF_DIR) clean
-	$(MAKE) -C $(MLX_DIR) clean
+	@if [ -d $(MLX_DIR) ]; then $(MAKE) -C $(MLX_DIR) clean; fi
 
 fclean: clean
-	rm -f $(NAME)
+	$(RM) $(NAME)
 	$(MAKE) -C $(LIBFT_DIR) fclean
 	$(MAKE) -C $(PRINTF_DIR) fclean
 
 re: fclean all
-
-.PHONY: all clean fclean re
